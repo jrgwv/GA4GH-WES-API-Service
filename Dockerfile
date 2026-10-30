@@ -32,6 +32,13 @@ RUN uv sync --locked --no-dev --no-install-project
 
 FROM ${PYTHON_IMAGE} AS runtime
 
+# Debian security fixes published after the base image was built. pip and setuptools
+# are build tools whose vendored msgpack and urllib3 carry CVEs; the runtime needs neither.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip uninstall -y pip setuptools wheel
+
 ENV PATH="/opt/venv/bin:${PATH}" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
