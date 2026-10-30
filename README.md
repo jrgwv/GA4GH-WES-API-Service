@@ -140,6 +140,9 @@ Values resolve in this order:
 
 ### Database
 
+Required; there is no built-in default (the service fails at startup if it is
+unset in both the environment and `ENV_SECRETS`).
+
 ```bash
 SQLALCHEMY_DATABASE_URI=mysql+aiomysql://wes_user:wes_password@localhost:3306/wes_db
 ```

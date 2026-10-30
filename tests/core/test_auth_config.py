@@ -106,3 +106,17 @@ class TestCallbackApiKey:
             self._settings(ms, "s3cret-key")
             await verify_callback_api_key("anything")
             cd.assert_called_once()
+
+
+def test_database_uri_has_no_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """SQLALCHEMY_DATABASE_URI must be supplied explicitly (F02)."""
+    monkeypatch.delenv("SQLALCHEMY_DATABASE_URI", raising=False)
+    monkeypatch.delenv("ENV_SECRETS", raising=False)
+    with pytest.raises(ValueError, match="SQLALCHEMY_DATABASE_URI"):
+        _ = Settings(_env_file=None).SQLALCHEMY_DATABASE_URI
+
+
+def test_database_uri_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """SQLALCHEMY_DATABASE_URI from env is used as-is."""
+    monkeypatch.setenv("SQLALCHEMY_DATABASE_URI", "sqlite+aiosqlite:///./x.db")
+    assert Settings(_env_file=None).SQLALCHEMY_DATABASE_URI == "sqlite+aiosqlite:///./x.db"

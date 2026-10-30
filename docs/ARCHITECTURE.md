@@ -601,7 +601,7 @@ masked and the DB URI password redacted.
 
 | Variable | Default | Used for |
 | -------- | ------- | -------- |
-| `SQLALCHEMY_DATABASE_URI` | local mysql URI | async engine (pool 10, overflow 20, `pool_pre_ping`) |
+| `SQLALCHEMY_DATABASE_URI` | none (required; startup error if unset) | async engine (pool 10, overflow 20, `pool_pre_ping`) |
 | `NGS360_API_URL` | `http://localhost:8000` | auth, workflow, and file lookups |
 | `STORAGE_BACKEND` | `local` | `local` or `s3` |
 | `LOCAL_STORAGE_PATH` | `/var/wes/storage` | local attachment root |

@@ -104,11 +104,14 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
-        """Build database URI from env or secrets, defaults to mysql+aiomysql"""
-        return self._get_config_value(
-            "SQLALCHEMY_DATABASE_URI",
-            default="mysql+aiomysql://wes_user:wes_password@localhost:3306/wes_db"
-        )
+        """Database URI from env or secrets. Required: no built-in default
+        (a default with embedded credentials must never reach a deployment)."""
+        value = self._get_config_value("SQLALCHEMY_DATABASE_URI")
+        if not value:
+            raise ValueError(
+                "SQLALCHEMY_DATABASE_URI is not set (env var or ENV_SECRETS secret)"
+            )
+        return value
 
     # NGS360 API Endpoint
     ngs360_api_url: str = Field(
