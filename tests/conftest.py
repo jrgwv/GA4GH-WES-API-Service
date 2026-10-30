@@ -39,6 +39,7 @@ def test_settings() -> Settings:
         storage_backend="local",
         local_storage_path="/tmp/wes_test",
         auth_method="none",
+        allow_no_auth=True,
         service_name="Test WES Service",
         service_organization_name="Test Org",
         service_environment="test",

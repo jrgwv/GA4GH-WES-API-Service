@@ -95,6 +95,7 @@ class TestGetCurrentUserNoneAuth:
         """When auth_method is 'none', should return 'anonymous'."""
         with patch("src.wes_service.core.security.get_settings") as mock_settings:
             mock_settings.return_value.auth_method = "none"
+            mock_settings.return_value.allow_no_auth = True
 
             result = await get_current_user(
                 basic_credentials=None,
@@ -107,6 +108,7 @@ class TestGetCurrentUserNoneAuth:
         """When auth_method is 'none', should return 'anonymous' even if credentials provided."""
         with patch("src.wes_service.core.security.get_settings") as mock_settings:
             mock_settings.return_value.auth_method = "none"
+            mock_settings.return_value.allow_no_auth = True
 
             basic_creds = HTTPBasicCredentials(username="alice", password="pass")
             result = await get_current_user(
@@ -114,6 +116,21 @@ class TestGetCurrentUserNoneAuth:
                 bearer_credentials=None,
             )
             assert result == "anonymous"
+
+
+    @pytest.mark.asyncio
+    async def test_none_without_opt_in_rejected(self):
+        """auth_method='none' without ALLOW_NO_AUTH must not grant access."""
+        with patch("src.wes_service.core.security.get_settings") as mock_settings:
+            mock_settings.return_value.auth_method = "none"
+            mock_settings.return_value.allow_no_auth = False
+
+            with pytest.raises(HTTPException) as exc_info:
+                await get_current_user(
+                    basic_credentials=None,
+                    bearer_credentials=None,
+                )
+            assert exc_info.value.status_code == 401
 
 
 class TestGetCurrentUserBasicAuth:
@@ -169,18 +186,19 @@ class TestGetCurrentUserBasicAuth:
             mock_verify.assert_called_once_with("wrongpass", "$2b$12$hashedpwd")
 
     @pytest.mark.asyncio
-    async def test_no_configured_users_allows_access(self):
-        """When no users are configured, any basic credentials should be allowed (dev mode)."""
+    async def test_no_configured_users_fails_closed(self):
+        """When no users are configured, basic auth must reject every request."""
         with patch("src.wes_service.core.security.get_settings") as mock_settings:
             mock_settings.return_value.auth_method = "basic"
             mock_settings.return_value.basic_auth_users = ""
 
             basic_creds = HTTPBasicCredentials(username="devuser", password="anything")
-            result = await get_current_user(
-                basic_credentials=basic_creds,
-                bearer_credentials=None,
-            )
-            assert result == "devuser"
+            with pytest.raises(HTTPException) as exc_info:
+                await get_current_user(
+                    basic_credentials=basic_creds,
+                    bearer_credentials=None,
+                )
+            assert exc_info.value.status_code == 401
 
     @pytest.mark.asyncio
     async def test_no_credentials_raises_401(self):

@@ -200,8 +200,15 @@ async def get_current_user(
     """
     settings = get_settings()
 
-    # Skip auth if method is 'none'
+    # Skip auth if method is 'none' (only with explicit ALLOW_NO_AUTH opt-in;
+    # Settings also refuses to load without it)
     if settings.auth_method == "none":
+        if settings.allow_no_auth is not True:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         return "anonymous"
 
     # Bearer token authentication (API token)
@@ -213,8 +220,12 @@ async def get_current_user(
         users = parse_basic_auth_users()
 
         if not users:
-            # No users configured, allow access (development mode)
-            return basic_credentials.username
+            # No users configured: fail closed (never accept arbitrary usernames).
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials",
+                headers={"WWW-Authenticate": "Basic"},
+            )
 
         username = basic_credentials.username
         if username not in users:
@@ -224,7 +235,7 @@ async def get_current_user(
                 headers={"WWW-Authenticate": "Basic"},
             )
 
-        # Verify password
+        # Verify password (bcrypt verify is constant-time)
         if not verify_password(basic_credentials.password, users[username]):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

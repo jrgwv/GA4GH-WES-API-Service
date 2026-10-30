@@ -7,7 +7,7 @@ import json
 import os
 from dotenv import load_dotenv
 
-from pydantic import Field, field_validator, computed_field, PrivateAttr
+from pydantic import Field, field_validator, computed_field, model_validator, PrivateAttr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 import boto3
@@ -160,13 +160,31 @@ class Settings(BaseSettings):
 
     # Authentication Configuration
     auth_method: Literal["basic", "oauth2", "api_token", "none"] = Field(
-        default="basic",
+        default="api_token",
         description="Authentication method",
     )
     basic_auth_users: str = Field(
         default="",
         description="Comma-separated list of username:hashed_password pairs",
     )
+    allow_no_auth: bool = Field(
+        default=False,
+        description="Explicit opt-in required for AUTH_METHOD=none (development only)",
+    )
+
+    @model_validator(mode="after")
+    def _validate_auth_config(self) -> "Settings":
+        """Fail closed on insecure authentication configurations."""
+        if self.auth_method == "none" and not self.allow_no_auth:
+            raise ValueError(
+                "AUTH_METHOD=none disables authentication; set ALLOW_NO_AUTH=1 "
+                "to opt in explicitly (development only)"
+            )
+        if self.auth_method == "basic" and not self.basic_auth_users.strip():
+            raise ValueError(
+                "AUTH_METHOD=basic requires BASIC_AUTH_USERS to be set"
+            )
+        return self
 
     # Token caching configuration
     enable_token_cache: bool = Field(

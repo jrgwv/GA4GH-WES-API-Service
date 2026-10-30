@@ -168,15 +168,17 @@ AUTH_METHOD=basic
 #   python -c "from passlib.context import CryptContext; print(CryptContext(schemes=['bcrypt']).hash('your_password'))"
 BASIC_AUTH_USERS=admin:$2b$12$hashedpassword,user2:$2b$12$hashedpassword
 
-# Development only
+# Development only (refuses to start without the explicit opt-in)
 AUTH_METHOD=none
+ALLOW_NO_AUTH=1
 ```
 
 `AUTH_METHOD=oauth2` is accepted by config validation but is **not
 implemented** — selecting it makes every request return 401.
 
-With `AUTH_METHOD=basic` and an empty `BASIC_AUTH_USERS`, any username is
-accepted. Do not deploy that.
+The default is `AUTH_METHOD=api_token`. `AUTH_METHOD=basic` with an empty
+`BASIC_AUTH_USERS`, or `AUTH_METHOD=none` without `ALLOW_NO_AUTH=1`, is a
+startup error (fail closed).
 
 ### Execution (Lambda) and callbacks
 
