@@ -48,6 +48,20 @@ def engine_run_id_from_record(run: WorkflowRun) -> str | None:
     return None
 
 
+HINTS = {
+    "CANNOT_START_CONTAINER_ERROR": (
+        "The engine could not start the task's container. Check that the image exists in the registry and that "
+        "the repository policy lets HealthOmics pull it. In this deployment an Alpine image without bash failed "
+        "this way; add bash (for example apk add bash) or use a bash-based image such as Ubuntu."
+    ),
+}
+
+
+def hint_for(failure_reason: str | None) -> str | None:
+    """A likely next step for a known failure reason, or None."""
+    return HINTS.get(failure_reason or "")
+
+
 def _clip(text: Any, limit: int) -> str:
     text = " ".join(str(text).split())
     return text if len(text) <= limit else text[: limit - 1] + "…"
@@ -127,6 +141,7 @@ async def diagnose_run(run: WorkflowRun) -> RunDiagnosis:
         engine_run_id=engine_run_id,
         engine_status=info["engine_status"],
         failure_reason=info["failure_reason"],
+        hint=hint_for(info["failure_reason"]),
         message=info["message"],
         failed_tasks=[FailedTask(**t) for t in info["failed_tasks"]],
         log_tail=info["log_tail"],

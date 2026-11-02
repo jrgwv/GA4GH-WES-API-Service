@@ -26,3 +26,4 @@ class RunDiagnosis(BaseModel):
     failed_tasks: list[FailedTask] = Field(default_factory=list)
     log_tail: list[str] = Field(default_factory=list)
     note: str | None = Field(None, description="Why details are missing, when available is false")
+    hint: str | None = Field(None, description="A likely next step for this failure reason, when one is known")

@@ -65,6 +65,7 @@ class TestRunDiagnosis:
         assert data["available"] is True
         assert data["engine_run_id"] == "4242"
         assert data["failure_reason"] == "CANNOT_START_CONTAINER_ERROR"
+        assert "bash" in data["hint"]
         assert data["message"] == "Container image could not be pulled"
         assert [t["name"] for t in data["failed_tasks"]] == ["main"]
         assert data["log_tail"] == ["engine started", "boom"]
@@ -80,6 +81,7 @@ class TestRunDiagnosis:
         with _boto(omics, logs):
             data = client.get(URL.format("r-links")).json()
         assert data["engine_run_id"] == "4242"
+        assert data["hint"] is None  # no hint for a failure reason we know nothing about
 
     async def test_engine_error_is_reported_without_details(self, client: TestClient, test_db):
         test_db.add(_run("r-denied", workflow_run_id="4242"))
