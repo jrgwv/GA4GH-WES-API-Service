@@ -140,6 +140,9 @@ Values resolve in this order:
 
 ### Database
 
+Required; there is no built-in default (the service fails at startup if it is
+unset in both the environment and `ENV_SECRETS`).
+
 ```bash
 SQLALCHEMY_DATABASE_URI=mysql+aiomysql://wes_user:wes_password@localhost:3306/wes_db
 ```
@@ -168,15 +171,17 @@ AUTH_METHOD=basic
 #   python -c "from passlib.context import CryptContext; print(CryptContext(schemes=['bcrypt']).hash('your_password'))"
 BASIC_AUTH_USERS=admin:$2b$12$hashedpassword,user2:$2b$12$hashedpassword
 
-# Development only
+# Development only (refuses to start without the explicit opt-in)
 AUTH_METHOD=none
+ALLOW_NO_AUTH=1
 ```
 
 `AUTH_METHOD=oauth2` is accepted by config validation but is **not
 implemented** — selecting it makes every request return 401.
 
-With `AUTH_METHOD=basic` and an empty `BASIC_AUTH_USERS`, any username is
-accepted. Do not deploy that.
+The default is `AUTH_METHOD=api_token`. `AUTH_METHOD=basic` with an empty
+`BASIC_AUTH_USERS`, or `AUTH_METHOD=none` without `ALLOW_NO_AUTH=1`, is a
+startup error (fail closed).
 
 ### Execution (Lambda) and callbacks
 
@@ -359,6 +364,21 @@ horizontally. Two consequences of running multiple workers:
   worker.
 - Migrations must be applied out of band (`make migrate-upgrade`); the app does
   not run them at startup.
+
+### Container image
+
+The [`Dockerfile`](Dockerfile) builds a slim Python image with the locked
+runtime dependencies (`uv sync --locked --no-dev`), runs as non-root uid
+`10001`, exposes port `8000`, and starts the same gunicorn command as the
+Procfile. Health check: `GET /healthcheck`.
+
+```bash
+docker build -t wes-service .
+# Apply migrations as a one-off task (never on web start):
+docker run --rm --env-file wes.env wes-service alembic upgrade head
+# Web
+docker run --rm --env-file wes.env -p 127.0.0.1:8000:8000 wes-service
+```
 
 ### Behind Nginx
 

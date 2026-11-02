@@ -1,5 +1,6 @@
 """Authentication for internal callback endpoints."""
 
+import hmac
 import logging
 from typing import Annotated
 
@@ -45,12 +46,11 @@ async def verify_callback_api_key(
             detail="Callback endpoint not properly configured",
         )
 
-    # Verify the key
-    if x_internal_api_key != expected_key:
-        logger.warning(
-            "Invalid callback API key attempted",
-            extra={"provided_key_prefix": x_internal_api_key[:8] if x_internal_api_key else None}
-        )
+    # Verify the key (constant-time; never log any part of the provided key)
+    if not hmac.compare_digest(
+        x_internal_api_key.encode("utf-8"), expected_key.encode("utf-8")
+    ):
+        logger.warning("Invalid callback API key attempted")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid internal API key",

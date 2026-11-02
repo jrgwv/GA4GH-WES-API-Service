@@ -1,11 +1,16 @@
 """Pytest configuration and fixtures."""
 
 import asyncio
+import os
 from collections.abc import AsyncGenerator, Generator
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+
+# The service has no default database URI (F02); provide one for the test
+# process before any src.wes_service module builds its engine at import time.
+os.environ.setdefault("SQLALCHEMY_DATABASE_URI", "sqlite+aiosqlite:///./wes_test.db")
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -39,6 +44,7 @@ def test_settings() -> Settings:
         storage_backend="local",
         local_storage_path="/tmp/wes_test",
         auth_method="none",
+        allow_no_auth=True,
         service_name="Test WES Service",
         service_organization_name="Test Org",
         service_environment="test",

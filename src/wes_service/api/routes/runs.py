@@ -13,6 +13,8 @@ from src.wes_service.schemas.run import (
     RunLog,
     RunStatus,
 )
+from src.wes_service.schemas.diagnosis import RunDiagnosis
+from src.wes_service.services.diagnosis_service import diagnose_run
 from src.wes_service.services.run_service import RunService
 from src.wes_service.services.workflow_submission_service import LambdaWorkflowSubmissionService
 
@@ -179,6 +181,29 @@ async def get_run_status(
     """
     service = RunService(db, None)  # type: ignore
     return await service.get_run_status(run_id, user)
+
+
+@router.get(
+    "/runs/{run_id}/diagnosis",
+    response_model=RunDiagnosis,
+    tags=["Workflow Runs"],
+    summary="GetRunDiagnosis",
+    description="Explain why a run failed, from the execution engine (not part of the GA4GH WES standard)",
+)
+async def get_run_diagnosis(
+    run_id: str,
+    db: DatabaseSession,
+    user: CurrentUser,
+) -> RunDiagnosis:
+    """
+    Read the engine-side failure reason, failed tasks and the tail of the engine log for a run.
+
+    The engine run ID comes from the WES record, so callers can only explain runs they can already read.
+    Returns available=false with a note when the engine details cannot be read.
+    """
+    service = RunService(db, None)  # type: ignore
+    run = await service._get_run(run_id, None)  # read access is open to all users
+    return await diagnose_run(run)
 
 
 @router.post(
